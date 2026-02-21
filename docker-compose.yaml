@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:17.6-alpine3.22
+    container_name: ${POSTGRES_CONTAINER_NAME}
+    env_file:
+      - .env
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB}", "-U", "${POSTGRES_USER}", "-q"]
+      start_period: 5s
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: always
+    networks:
+      - default_network
+
+volumes:
+  postgres_data:
+
+networks:
+  default_network:
+    driver: bridge
