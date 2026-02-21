@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 
 
 class CreateEmployeeSchema(BaseModel):
-    full_name: str
-    position: str
+    full_name: str = Field(min_length=1, max_length=200)
+    position: str = Field(min_length=1, max_length=200)
     hired_at: datetime | None = Field(default=None)
 
 
