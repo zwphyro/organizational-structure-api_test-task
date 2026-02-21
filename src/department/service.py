@@ -1,8 +1,10 @@
 from datetime import datetime
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.department.models import Department
 from src.dependencies import DBDependency
 from src.employee.models import Employee
+from src.exceptions import NotFoundError
 
 
 class DepartmentService:
@@ -12,6 +14,12 @@ class DepartmentService:
         self.session = session
 
     async def create_department(self, name: str, parent_id: int | None):
+        if parent_id is not None:
+            try:
+                await self.session.get_one(Department, parent_id)
+            except NoResultFound:
+                raise NotFoundError("Parent department not found")
+
         department = Department(name=name, parent_id=parent_id)
 
         self.session.add(department)
@@ -20,8 +28,17 @@ class DepartmentService:
         return department
 
     async def create_employee(
-        self, department_id, full_name: str, position: str, hired_at: datetime | None
+        self,
+        department_id: int,
+        full_name: str,
+        position: str,
+        hired_at: datetime | None,
     ):
+        try:
+            await self.session.get_one(Department, department_id)
+        except NoResultFound:
+            raise NotFoundError("Department not found")
+
         employee = Employee(
             department_id=department_id,
             full_name=full_name,
@@ -35,9 +52,10 @@ class DepartmentService:
         return employee
 
     async def move_department(self, id: int, name: str | None, parent_id: int | None):
-        department = await self.session.get(Department, id)
-        if department is None:
-            return None
+        try:
+            department = await self.session.get_one(Department, id)
+        except NoResultFound:
+            raise NotFoundError("Department not found")
 
         if name is not None:
             department.name = name

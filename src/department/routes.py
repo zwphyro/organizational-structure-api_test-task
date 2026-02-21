@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 
 from src.department.schemas import (
     CreateDepartmentSchema,
@@ -8,6 +8,7 @@ from src.department.schemas import (
 )
 from src.department.service import DepartmentService
 from src.employee.schemas import CreateEmployeeSchema, EmployeeSchema
+from src.schemas import HTTPErrorSchema
 
 
 router = APIRouter()
@@ -15,7 +16,11 @@ router = APIRouter()
 ServiceDependency = Annotated[DepartmentService, Depends()]
 
 
-@router.post("/", response_model=DepartmentSchema)
+@router.post(
+    "/",
+    response_model=DepartmentSchema,
+    responses={status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema}},
+)
 async def create_department(
     new_department: CreateDepartmentSchema, service: ServiceDependency
 ):
@@ -25,7 +30,11 @@ async def create_department(
     return department
 
 
-@router.post("/{id}/employees/", response_model=EmployeeSchema)
+@router.post(
+    "/{id}/employees/",
+    response_model=EmployeeSchema,
+    responses={status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema}},
+)
 async def create_employee(
     id: int, new_employee: CreateEmployeeSchema, service: ServiceDependency
 ):
@@ -40,7 +49,11 @@ def get_department():
     pass
 
 
-@router.patch("/{id}", response_model=DepartmentSchema)
+@router.patch(
+    "/{id}",
+    response_model=DepartmentSchema,
+    responses={status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema}},
+)
 async def move_department(
     id: int, new_department: MoveDepartmentSchema, service: ServiceDependency
 ):

@@ -1,15 +1,15 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CreateDepartmentSchema(BaseModel):
     name: str
-    parent_id: int | None
+    parent_id: int | None = Field(default=None)
 
 
 class MoveDepartmentSchema(BaseModel):
-    name: str | None
-    parent_id: int | None
+    name: str | None = Field(default=None)
+    parent_id: int | None = Field(default=None)
 
 
 class DepartmentSchema(BaseModel):

@@ -1,11 +1,11 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CreateEmployeeSchema(BaseModel):
     full_name: str
     position: str
-    hired_at: datetime | None
+    hired_at: datetime | None = Field(default=None)
 
 
 class EmployeeSchema(BaseModel):
