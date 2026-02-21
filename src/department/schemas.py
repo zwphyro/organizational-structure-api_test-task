@@ -8,7 +8,7 @@ class CreateDepartmentSchema(BaseModel):
 
 
 class MoveDepartmentSchema(BaseModel):
-    name: str | None = Field(default=None)
+    name: str = Field(default=None)  # type: ignore[no-assignment-type]
     parent_id: int | None = Field(default=None)
 
 

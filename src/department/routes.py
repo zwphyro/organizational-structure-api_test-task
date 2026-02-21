@@ -1,6 +1,7 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
+from src.department.enums import DeleteModeEnum
 from src.department.schemas import (
     CreateDepartmentSchema,
     DepartmentSchema,
@@ -45,7 +46,9 @@ async def create_employee(
 
 
 @router.get("/{id}")
-def get_department():
+def get_department(
+    depth: int = Query(default=1, le=5), include_employees: bool = Query(default=True)
+):
     pass
 
 
@@ -64,5 +67,7 @@ async def move_department(
 
 
 @router.delete("/{id}")
-def delete_department():
+def delete_department(
+    mode: DeleteModeEnum, reassign_to_department_id: int = Query(default=None)
+):
     pass
