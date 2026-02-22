@@ -74,11 +74,10 @@ async def get_department(
 async def move_department(
     service: ServiceDependency, id: int, new_department: MoveDepartmentSchema
 ):
-    pass
-    # department = await service.move_department(
-    #     id, new_department.name, new_department.parent_id
-    # )
-    # return department
+    update_dict = new_department.model_dump(exclude_unset=True)
+    department = await service.move_department(id, update_dict)
+
+    return department
 
 
 @router.delete("/{id}")

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db import Base, id, created_at
@@ -18,4 +18,8 @@ class Department(Base):
     children: Mapped[list["Department"]] = relationship(back_populates="parent")
     employees: Mapped[list["Employee"]] = relationship(  # type: ignore[no-undefined-variable] # NOQA: F821
         back_populates="department", order_by="Employee.full_name"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("name", "parent_id", name="name_parent_id_unique"),
     )

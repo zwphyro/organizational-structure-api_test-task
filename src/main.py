@@ -1,7 +1,7 @@
 from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from src.api import router
-from src.department.exceptions import DuplicateDepartmentNameError
+from src.department.exceptions import DepartmentCycleError, DuplicateDepartmentNameError
 import src.models  # type: ignore[no-unused-import] # NOQA: F401
 from src.exceptions import NotFoundError
 
@@ -23,6 +23,14 @@ def not_found_exception_handler(_, exception: NotFoundError):
 def duplicate_department_name_exception_handler(
     _, exception: DuplicateDepartmentNameError
 ):
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": str(exception)},
+    )
+
+
+@app.exception_handler(DepartmentCycleError)
+def department_cycle_exception_handler(_, exception: DepartmentCycleError):
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content={"detail": str(exception)},
