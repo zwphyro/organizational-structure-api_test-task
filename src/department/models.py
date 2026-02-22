@@ -1,5 +1,6 @@
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from src.db import Base, id, created_at
 
 
@@ -15,4 +16,6 @@ class Department(Base):
         back_populates="children", remote_side="Department.id"
     )
     children: Mapped[list["Department"]] = relationship(back_populates="parent")
-    employees: Mapped[list["Employee"]] = relationship(back_populates="department")  # type: ignore[no-undefined-variable] # NOQA: F821
+    employees: Mapped[list["Employee"]] = relationship(  # type: ignore[no-undefined-variable] # NOQA: F821
+        back_populates="department", order_by="Employee.full_name"
+    )

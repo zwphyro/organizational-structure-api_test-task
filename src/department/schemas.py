@@ -1,6 +1,8 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 
+from src.employee.schemas import EmployeeSchema
+
 
 class CreateDepartmentSchema(BaseModel):
     name: str = Field(min_length=1, max_length=200)
@@ -20,3 +22,9 @@ class DepartmentSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DepartmentTreeSchema(BaseModel):
+    department: DepartmentSchema
+    employees: list[EmployeeSchema] = Field(exclude_if=lambda v: not v)
+    children: list[DepartmentSchema]

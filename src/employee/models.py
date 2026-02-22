@@ -1,6 +1,7 @@
 from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from src.db import Base, id, created_at
 
 
