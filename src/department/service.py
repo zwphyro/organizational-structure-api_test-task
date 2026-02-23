@@ -89,7 +89,7 @@ class DepartmentService:
         is_reassign = reassign_to_department_id is not None
         async with self.uow:
             department = await self.uow.departments.get_by_id(
-                id, include_employees=is_reassign, include_children=is_reassign
+                id, include_children=is_reassign
             )
             if department is None:
                 raise NotFoundError("Department not found")
@@ -113,16 +113,20 @@ class DepartmentService:
                         "Department with the same name already exists under the new parent department"
                     )
 
-                if self.uow.departments.check_is_child(id, reassign_to_department_id):
+                if await self.uow.departments.check_is_child(
+                    id, reassign_to_department_id
+                ):
                     raise DepartmentCycleError("Department cycle detected")
 
-                for employee in department.employees:
-                    employee.department_id = reassign_to_department_id
+                await self.uow.departments.reassign_parent(
+                    id, reassign_to_department_id
+                )
 
-                for child in department.children:
-                    child.parent_id = reassign_to_department_id
+                await self.uow.employees.reassign_department(
+                    id, reassign_to_department_id
+                )
 
-            await self.uow.departments.delete(department)
+            await self.uow.departments.delete(id)
             await self.uow.commit()
 
     async def _check_department_name(self, name: str, parent_id: int | None):

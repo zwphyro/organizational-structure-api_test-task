@@ -28,6 +28,9 @@ class IUnitOfWork(ABC):
     async def commit(self): ...
 
     @abstractmethod
+    async def flush(self): ...
+
+    @abstractmethod
     async def rollback(self): ...
 
     @abstractmethod
@@ -50,6 +53,9 @@ class UnitOfWork(IUnitOfWork):
         except IntegrityError as e:
             await self.rollback()
             self._handle_integrity_error(e)
+
+    async def flush(self):
+        await self.session.flush()
 
     async def rollback(self):
         await self.session.rollback()

@@ -1,4 +1,34 @@
 services:
+  app:
+    image: organizational_structure:0.1.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${APP_CONTAINER_NAME}
+    env_file:
+      - .env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - default_network
+
+  migrate:
+    image: organizational_structure:0.1.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${MIGRATE_CONTAINER_NAME}
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: /bin/sh -c "uv run alembic upgrade head"
+    restart: no
+    networks:
+      - default_network
+
   postgres:
     image: postgres:17.6-alpine3.22
     container_name: ${POSTGRES_CONTAINER_NAME}

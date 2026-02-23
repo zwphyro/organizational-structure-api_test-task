@@ -1,4 +1,4 @@
-from sqlalchemy import literal, select
+from sqlalchemy import delete, literal, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -70,6 +70,14 @@ class DepartmentRepository:
 
         return bool(result.scalars().first())
 
-    async def delete(self, department: Department):
-        await self.session.delete(department)
-        return department
+    async def reassign_parent(self, old_department_id: int, new_department_id: int):
+        query = (
+            update(Department)
+            .where(Department.parent_id == old_department_id)
+            .values(parent_id=new_department_id)
+        )
+        await self.session.execute(query)
+
+    async def delete(self, id: int):
+        query = delete(Department).where(Department.id == id)
+        await self.session.execute(query)
