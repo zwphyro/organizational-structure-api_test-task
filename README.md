@@ -1,4 +1,4 @@
-# Video Analytic Bot
+# Organizational Structure API
 
 ## Конфигурация
 
