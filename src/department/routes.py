@@ -102,4 +102,3 @@ async def delete_department(
     params: DeleteDepartmentSchema = Depends(),
 ):
     await service.delete_department(id, params.reassign_to_department_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)

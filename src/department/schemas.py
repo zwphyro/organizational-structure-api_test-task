@@ -1,4 +1,5 @@
 from datetime import datetime
+from fastapi import HTTPException, status
 from pydantic import BaseModel, Field, model_validator
 
 from src.department.enums import DeleteModeEnum
@@ -25,10 +26,16 @@ class DeleteDepartmentSchema(BaseModel):
         reassign_to_department_id = self.reassign_to_department_id
 
         if mode == DeleteModeEnum.REASSIGN and reassign_to_department_id is None:
-            raise ValueError("reassign_to_department_id is required")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="reassign_to_department_id is required for REASSIGN mode",
+            )
 
         if mode == DeleteModeEnum.CASCADE and reassign_to_department_id is not None:
-            raise ValueError("reassign_to_department_id is not allowed")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="reassign_to_department_id is not allowed for CASCADE mode",
+            )
 
         return self
 
