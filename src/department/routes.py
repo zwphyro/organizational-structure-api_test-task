@@ -1,9 +1,9 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
-from src.department.enums import DeleteModeEnum
 from src.department.schemas import (
     CreateDepartmentSchema,
+    DeleteDepartmentSchema,
     DepartmentSchema,
     DepartmentTreeSchema,
     MoveDepartmentSchema,
@@ -48,7 +48,11 @@ async def create_employee(
     return employee
 
 
-@router.get("/{id}", response_model=DepartmentTreeSchema)
+@router.get(
+    "/{id}",
+    response_model=DepartmentTreeSchema,
+    responses={status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema}},
+)
 async def get_department(
     service: ServiceDependency,
     id: int,
@@ -69,7 +73,10 @@ async def get_department(
 @router.patch(
     "/{id}",
     response_model=DepartmentSchema,
-    responses={status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema}},
+    responses={
+        status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
+        status.HTTP_409_CONFLICT: {"model": HTTPErrorSchema},
+    },
 )
 async def move_department(
     service: ServiceDependency, id: int, new_department: MoveDepartmentSchema
@@ -80,11 +87,19 @@ async def move_department(
     return department
 
 
-@router.delete("/{id}")
+@router.delete(
+    "/{id}",
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
+        status.HTTP_409_CONFLICT: {"model": HTTPErrorSchema},
+    },
+)
 async def delete_department(
     service: ServiceDependency,
     id: int,
-    mode: DeleteModeEnum,
-    reassign_to_department_id: int = Query(default=None),
+    params: DeleteDepartmentSchema = Depends(),
 ):
-    await service.delete_department(id, reassign_to_department_id)
+    await service.delete_department(id, params.reassign_to_department_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

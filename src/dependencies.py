@@ -1,22 +1,11 @@
-from typing import Annotated, AsyncGenerator
-
+from typing import Annotated
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db import AsyncSessionLocal
-
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-
-        except Exception:
-            await session.rollback()
-            raise
-
-        finally:
-            await session.close()
+from src.unit_of_work import UnitOfWork
 
 
-DBDependency = Annotated[AsyncSession, Depends(get_db)]
+async def get_uow():
+    return UnitOfWork()
+
+
+UOWDependency = Annotated[UnitOfWork, Depends(get_uow)]

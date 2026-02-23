@@ -1,37 +1,24 @@
 from datetime import datetime
-from sqlalchemy import literal, select
-from sqlalchemy.exc import IntegrityError, NoResultFound
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+
 from src.department.exceptions import DepartmentCycleError, DuplicateDepartmentNameError
 from src.department.models import Department
-from src.dependencies import DBDependency
+from src.dependencies import UOWDependency
 from src.employee.models import Employee
 from src.exceptions import NotFoundError
 
 
 class DepartmentService:
-    session: AsyncSession
-
-    def __init__(self, session: DBDependency):
-        self.session = session
+    def __init__(self, uow: UOWDependency):
+        self.uow = uow
 
     async def create_department(self, name: str, parent_id: int | None):
-        if parent_id is not None:
-            try:
-                await self.session.get_one(Department, parent_id)
-            except NoResultFound:
-                raise NotFoundError("Parent department not found")
+        async with self.uow:
+            await self._check_department_name(name, parent_id)
 
-        department = Department(name=name, parent_id=parent_id)
+            department = Department(name=name, parent_id=parent_id)
 
-        self.session.add(department)
-        try:
-            await self.session.commit()
-        except IntegrityError:
-            raise DuplicateDepartmentNameError(
-                "Department with the same name already exists under the parent department"
-            )
+            self.uow.departments.add(department)
+            await self.uow.commit()
 
         return department
 
@@ -42,107 +29,114 @@ class DepartmentService:
         position: str,
         hired_at: datetime | None,
     ):
-        try:
-            await self.session.get_one(Department, department_id)
-        except NoResultFound:
-            raise NotFoundError("Department not found")
+        async with self.uow:
+            department = await self.uow.departments.get_by_id(department_id)
+            if department is None:
+                raise NotFoundError("Department not found")
 
-        employee = Employee(
-            department_id=department_id,
-            full_name=full_name,
-            position=position,
-            hired_at=hired_at,
-        )
+            employee = Employee(
+                department_id=department_id,
+                full_name=full_name,
+                position=position,
+                hired_at=hired_at,
+            )
 
-        self.session.add(employee)
-        await self.session.commit()
+            self.uow.employees.add(employee)
+            await self.uow.commit()
 
         return employee
 
     async def get_department(self, id: int, depth: int, include_employees: bool):
-        query = select(Department).where(Department.id == id)
+        async with self.uow:
+            department = await self.uow.departments.get_by_id(
+                id, include_employees=include_employees
+            )
+            if department is None:
+                raise NotFoundError("Department not found")
 
-        if include_employees:
-            query = query.options(selectinload(Department.employees))
-
-        result = await self.session.execute(query)
-        try:
-            department = result.scalars().one()
-        except NoResultFound:
-            raise NotFoundError("Department not found")
-
-        recursive_cte = (
-            select(Department.id, literal(1).label("depth"))
-            .where(Department.parent_id == id)
-            .cte(recursive=True)
-        )
-
-        recursive_cte = recursive_cte.union_all(
-            select(Department.id, (recursive_cte.c.depth + 1).label("depth"))
-            .join(Department, Department.parent_id == recursive_cte.c.id)
-            .where(recursive_cte.c.depth < depth)
-        )
-
-        query = select(Department).join(
-            recursive_cte, Department.id == recursive_cte.c.id
-        )
-
-        result = await self.session.execute(query)
-        children = result.scalars().unique().all()
+            children = await self.uow.departments.get_children(id, depth)
 
         return department, department.employees if include_employees else [], children
 
     async def move_department(self, id: int, update_dict: dict):
-        try:
-            department = await self.session.get_one(Department, id)
-        except NoResultFound:
-            raise NotFoundError("Department not found")
+        async with self.uow:
+            department = await self.uow.departments.get_by_id(id)
+            if department is None:
+                raise NotFoundError("Department not found")
 
-        if "parent_id" in update_dict and await self._check_cycle(
-            id, update_dict["parent_id"]
-        ):
-            raise DepartmentCycleError("Department cycle detected")
+            if any(key in update_dict for key in ["parent_id", "name"]):
+                parent_id = (
+                    update_dict["parent_id"]
+                    if "parent_id" in update_dict
+                    else department.parent_id
+                )
+                name = update_dict["name"] if "name" in update_dict else department.name
+                await self._check_department_name(name, parent_id)
 
-        for key, value in update_dict.items():
-            setattr(department, key, value)
+            if "parent_id" in update_dict:
+                new_parent_id = update_dict["parent_id"]
+                if await self.uow.departments.check_is_child(id, new_parent_id):
+                    raise DepartmentCycleError("Department cycle detected")
 
-        try:
-            await self.session.commit()
-        except IntegrityError:
-            raise DuplicateDepartmentNameError(
-                "Department with the same name already exists under the parent department"
-            )
+            for key, value in update_dict.items():
+                setattr(department, key, value)
+
+            await self.uow.commit()
 
         return department
 
     async def delete_department(self, id: int, reassign_to_department_id: int | None):
-        try:
-            department = await self.session.get_one(Department, id)
-        except NoResultFound:
-            raise NotFoundError("Department not found")
+        is_reassign = reassign_to_department_id is not None
+        async with self.uow:
+            department = await self.uow.departments.get_by_id(
+                id, include_employees=is_reassign, include_children=is_reassign
+            )
+            if department is None:
+                raise NotFoundError("Department not found")
 
-        if reassign_to_department_id is not None:
-            pass
+            if is_reassign:
+                reassign_to_department = await self.uow.departments.get_by_id(
+                    reassign_to_department_id,
+                    include_children=True,
+                )
+                if reassign_to_department is None:
+                    raise NotFoundError("Reassign to department not found")
 
-        await self.session.delete(department)
-        await self.session.commit()
+                new_department_children_names = {
+                    child.name for child in reassign_to_department.children
+                }
+                if any(
+                    child.name in new_department_children_names
+                    for child in department.children
+                ):
+                    raise DuplicateDepartmentNameError(
+                        "Department with the same name already exists under the new parent department"
+                    )
 
-    async def _check_cycle(self, id: int, new_parent_id: int | None):
-        if new_parent_id is None:
-            return False
+                if self.uow.departments.check_is_child(id, reassign_to_department_id):
+                    raise DepartmentCycleError("Department cycle detected")
 
-        if id == new_parent_id:
-            return True
+                for employee in department.employees:
+                    employee.department_id = reassign_to_department_id
 
-        recursive_cte = (
-            select(Department.id).where(Department.parent_id == id).cte(recursive=True)
+                for child in department.children:
+                    child.parent_id = reassign_to_department_id
+
+            await self.uow.departments.delete(department)
+            await self.uow.commit()
+
+    async def _check_department_name(self, name: str, parent_id: int | None):
+        if parent_id is None:
+            return
+
+        parent_department = await self.uow.departments.get_by_id(
+            parent_id, include_children=True
         )
 
-        recursive_cte = recursive_cte.union_all(
-            select(Department.id).where(Department.parent_id == recursive_cte.c.id)
-        )
+        if parent_department is None:
+            raise NotFoundError("Parent department not found")
 
-        query = select(recursive_cte).where(recursive_cte.c.id == new_parent_id)
-        result = await self.session.execute(query)
-
-        return bool(result.scalars().first())
+        if any(department.name == name for department in parent_department.children):
+            raise DuplicateDepartmentNameError(
+                "Department with the same name already exists under the parent department"
+            )
