@@ -52,5 +52,5 @@ class DepartmentSchema(BaseModel):
 
 class DepartmentTreeSchema(BaseModel):
     department: DepartmentSchema
-    employees: list[EmployeeSchema] = Field(exclude_if=lambda v: not v)
+    employees: list[EmployeeSchema] = Field(exclude_if=lambda v: v in None)
     children: list[DepartmentSchema]

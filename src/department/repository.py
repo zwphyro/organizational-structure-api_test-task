@@ -10,7 +10,11 @@ class DepartmentRepository:
         self.session = session
 
     async def get_by_id(
-        self, id: int, include_employees: bool = False, include_children: bool = False
+        self,
+        id: int,
+        *,
+        include_employees: bool = False,
+        include_children: bool = False,
     ):
         query = select(Department).where(Department.id == id)
 
@@ -27,7 +31,7 @@ class DepartmentRepository:
         self.session.add(department)
         return department
 
-    async def get_children(self, id: int, depth: int | None = None):
+    async def get_children(self, id: int, *, depth: int | None = None):
         recursive_cte = (
             select(Department.id, literal(1).label("depth"))
             .where(Department.parent_id == id)

@@ -54,9 +54,9 @@ class DepartmentService:
             if department is None:
                 raise NotFoundError("Department not found")
 
-            children = await self.uow.departments.get_children(id, depth)
+            children = await self.uow.departments.get_children(id, depth=depth)
 
-        return department, department.employees if include_employees else [], children
+        return department, department.employees if include_employees else None, children
 
     async def move_department(self, id: int, update_dict: dict):
         async with self.uow:

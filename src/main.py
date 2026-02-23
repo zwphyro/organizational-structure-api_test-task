@@ -6,10 +6,7 @@ from src.department.exceptions import DepartmentCycleError, DuplicateDepartmentN
 import src.models  # type: ignore[no-unused-import] # NOQA: F401
 from src.exceptions import DatabaseError, NotFoundError
 
-app = FastAPI(
-    title="Organizational Structure API",
-    root_path="/api/v1",
-)
+app = FastAPI(title="Organizational Structure API")
 
 
 @app.exception_handler(NotFoundError)

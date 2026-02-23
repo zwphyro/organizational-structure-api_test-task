@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Optional, Type
 from types import TracebackType
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db import AsyncSessionLocal
 from src.department.exceptions import DuplicateDepartmentNameError
 from src.department.repository import DepartmentRepository
 from src.employee.repository import EmployeeRepository
@@ -38,8 +38,8 @@ class IUnitOfWork(ABC):
 
 
 class UnitOfWork(IUnitOfWork):
-    def __init__(self):
-        self.session_pool = AsyncSessionLocal
+    def __init__(self, session_pool: callable[[], AsyncSession]):
+        self.session_pool = session_pool
 
     async def __aenter__(self):
         self.session = self.session_pool()
