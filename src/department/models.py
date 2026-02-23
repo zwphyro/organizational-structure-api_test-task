@@ -8,16 +8,23 @@ class Department(Base):
     id: Mapped[id]
 
     name: Mapped[str]
-    parent_id: Mapped[int | None] = mapped_column(ForeignKey("departments.id"))
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("departments.id", ondelete="CASCADE")
+    )
 
     created_at: Mapped[created_at]
 
     parent: Mapped["Department | None"] = relationship(
         back_populates="children", remote_side="Department.id"
     )
-    children: Mapped[list["Department"]] = relationship(back_populates="parent")
+    children: Mapped[list["Department"]] = relationship(
+        back_populates="parent", cascade="all, delete-orphan", passive_deletes=True
+    )
     employees: Mapped[list["Employee"]] = relationship(  # type: ignore[no-undefined-variable] # NOQA: F821
-        back_populates="department", order_by="Employee.full_name"
+        back_populates="department",
+        order_by="Employee.full_name",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     __table_args__ = (

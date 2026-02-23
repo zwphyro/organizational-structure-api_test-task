@@ -65,8 +65,8 @@ class DepartmentService:
         if include_employees:
             query = query.options(selectinload(Department.employees))
 
+        result = await self.session.execute(query)
         try:
-            result = await self.session.execute(query)
             department = result.scalars().one()
         except NoResultFound:
             raise NotFoundError("Department not found")
@@ -114,6 +114,18 @@ class DepartmentService:
             )
 
         return department
+
+    async def delete_department(self, id: int, reassign_to_department_id: int | None):
+        try:
+            department = await self.session.get_one(Department, id)
+        except NoResultFound:
+            raise NotFoundError("Department not found")
+
+        if reassign_to_department_id is not None:
+            pass
+
+        await self.session.delete(department)
+        await self.session.commit()
 
     async def _check_cycle(self, id: int, new_parent_id: int | None):
         if new_parent_id is None:

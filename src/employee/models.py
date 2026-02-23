@@ -8,7 +8,9 @@ from src.db import Base, id, created_at
 class Employee(Base):
     id: Mapped[id]
 
-    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"))
+    department_id: Mapped[int] = mapped_column(
+        ForeignKey("departments.id", ondelete="CASCADE")
+    )
     full_name: Mapped[str]
     position: Mapped[str]
     hired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

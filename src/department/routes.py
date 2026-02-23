@@ -81,9 +81,10 @@ async def move_department(
 
 
 @router.delete("/{id}")
-def delete_department(
+async def delete_department(
     service: ServiceDependency,
+    id: int,
     mode: DeleteModeEnum,
     reassign_to_department_id: int = Query(default=None),
 ):
-    pass
+    await service.delete_department(id, reassign_to_department_id)
