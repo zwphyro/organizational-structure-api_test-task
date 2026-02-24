@@ -3,8 +3,9 @@ from fastapi.responses import JSONResponse
 
 from src.api import router
 from src.department.exceptions import DepartmentCycleError, DuplicateDepartmentNameError
-import src.models  # type: ignore[no-unused-import] # NOQA: F401
 from src.exceptions import DatabaseError, NotFoundError
+
+import src.models  # type: ignore[no-unused-import] # NOQA: F401
 
 app = FastAPI(title="Organizational Structure API")
 

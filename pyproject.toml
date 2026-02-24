@@ -17,4 +17,32 @@ dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
+    "ruff>=0.15.2",
+    "taskipy>=1.14.1",
 ]
+
+[tool.taskipy.tasks]
+start = "docker compose up -d"
+start-dev = "task start-storages && task start-app-dev"
+start-app-dev = "uvicorn --reload src.main:app --host 0.0.0.0 --port 8000"
+start-app-prod = "uvicorn src.main:app --host 0.0.0.0 --port 8000"
+start-storages = "docker compose up -d postgres"
+stop = "docker compose down"
+
+logs-storages = "docker compose logs -f postgres"
+logs-app = "docker compose logs -f app"
+logs-migrate = "docker compose logs -f migrate"
+
+migrate-to-head = "alembic upgrade head"
+migrate-to = "alembic upgrade"
+migrate-downgrade-to = "alembic downgrade"
+migrate-revision = "alembic revision --autogenerate -m"
+migrate-check-current = "alembic current"
+migrate-check-history = "alembic history"
+
+lint = "ruff check src tests"
+lint-fix = "ruff check src tests --fix"
+test = "pytest tests"
+test-coverage = "pytest --cov=src tests && coverage html"
+
+list = "task --list"

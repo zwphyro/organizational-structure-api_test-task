@@ -1,5 +1,4 @@
-from abc import ABC, abstractmethod
-from typing import Optional, Type
+from typing import Type
 from types import TracebackType
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,34 +9,7 @@ from src.employee.repository import EmployeeRepository
 from src.exceptions import DatabaseError
 
 
-class IUnitOfWork(ABC):
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ):
-        if exc_type is not None:
-            await self.rollback()
-        await self.close()
-
-    @abstractmethod
-    async def commit(self): ...
-
-    @abstractmethod
-    async def flush(self): ...
-
-    @abstractmethod
-    async def rollback(self): ...
-
-    @abstractmethod
-    async def close(self): ...
-
-
-class UnitOfWork(IUnitOfWork):
+class UnitOfWork:
     def __init__(self, session_pool: callable[[], AsyncSession]):
         self.session_pool = session_pool
 
@@ -45,7 +17,17 @@ class UnitOfWork(IUnitOfWork):
         self.session = self.session_pool()
         self.departments = DepartmentRepository(self.session)
         self.employees = EmployeeRepository(self.session)
-        return await super().__aenter__()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ):
+        if exc_type is not None:
+            await self.rollback()
+        await self.close()
 
     async def commit(self):
         try:
